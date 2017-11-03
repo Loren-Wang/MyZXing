@@ -47,6 +47,16 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
             }
+
+            @Override
+            protected void showScanImage(final Bitmap bitmap) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        imgView.setImageBitmap(bitmap);
+                    }
+                });
+            }
         };
         qrCodeEncode.onCreate(this);
 

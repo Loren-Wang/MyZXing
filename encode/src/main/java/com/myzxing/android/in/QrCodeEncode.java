@@ -56,6 +56,8 @@ public abstract class QrCodeEncode implements SurfaceHolder.Callback {
         // 当扫描框的尺寸不正确时会出现bug
         cameraManager = new CameraManager(activity);
 
+        cameraManager.setManualFramingRect(0.1f,0.1f,0.8f,0.8f);
+
 
         SurfaceHolder surfaceHolder = getSurfaceView().getHolder();
         if(hasSurface) {
@@ -111,6 +113,7 @@ public abstract class QrCodeEncode implements SurfaceHolder.Callback {
 
     protected abstract SurfaceView getSurfaceView();//获取sufaceview
     protected abstract void handleDecode(Result rawResult, Bitmap barcode, float scaleFactor);
+    protected abstract void showScanImage(Bitmap bitmap);
 
 
 
@@ -142,6 +145,7 @@ public abstract class QrCodeEncode implements SurfaceHolder.Callback {
     private ScanResultHandler scanResultHandler;
     private final int SCAN_SUCCESS = 0x0000;//扫描成功
     private final int SCAN_FAIL = 0x0001;//扫描失败
+    private final int SCAN_CROP_IMAGE = 0x0002;//扫描到的图片
     /**
      * 结果处理初始化
      */
@@ -159,11 +163,13 @@ public abstract class QrCodeEncode implements SurfaceHolder.Callback {
      * @param message
      */
     public void handleScanResultMessage(Message message){
+        Bundle bundle = message.getData();
+        Bitmap barcode = null;
+        float scaleFactor = 1.0f;
+
+
         switch (message.what){
             case SCAN_SUCCESS:
-                Bundle bundle = message.getData();
-                Bitmap barcode = null;
-                float scaleFactor = 1.0f;
                 if (bundle != null) {
                     byte[] compressedBitmap = bundle
                             .getByteArray(BARCODE_BITMAP);
@@ -177,6 +183,23 @@ public abstract class QrCodeEncode implements SurfaceHolder.Callback {
                             .getFloat(BARCODE_SCALED_FACTOR);
                 }
                 handleDecode((Result) message.obj,barcode,scaleFactor);
+                break;
+            case SCAN_CROP_IMAGE:
+                bundle = message.getData();
+                barcode = null;
+                if (bundle != null) {
+                    byte[] compressedBitmap = bundle
+                            .getByteArray(BARCODE_BITMAP);
+                    if (compressedBitmap != null) {
+                        barcode = BitmapFactory.decodeByteArray(compressedBitmap,
+                                0, compressedBitmap.length, null);
+                        // Mutable copy:
+                        barcode = barcode.copy(Bitmap.Config.ARGB_8888, true);
+                    }
+                    scaleFactor = bundle
+                            .getFloat(BARCODE_SCALED_FACTOR);
+                }
+                showScanImage(barcode);
                 break;
             case SCAN_FAIL:
                 resetDecode();
@@ -314,6 +337,14 @@ public abstract class QrCodeEncode implements SurfaceHolder.Callback {
         PlanarYUVLuminanceSource source = cameraManager
                 .buildLuminanceSource(data, width, height);
         if (source != null) {
+            Message message = Message.obtain(scanResultHandler, SCAN_CROP_IMAGE, rawResult);
+            Bundle bundle = new Bundle();
+            bundleThumbnail(source, bundle);
+            message.setData(bundle);
+            message.sendToTarget();
+//
+//            Log.d("testtest",source.getWidth() + "+++++" + source.getHeight());
+
             BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
             try {
                 rawResult = multiFormatReader.decodeWithState(bitmap);

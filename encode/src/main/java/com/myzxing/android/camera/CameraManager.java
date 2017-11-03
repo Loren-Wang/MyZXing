@@ -53,8 +53,10 @@ public final class CameraManager {
 	private boolean initialized;
 	private boolean previewing;
 	private int requestedCameraId = -1;
-	private int requestedFramingRectWidth;
-	private int requestedFramingRectHeight;
+	private float requestedFramingRectLeft;
+	private float requestedFramingRectTop;
+	private float requestedFramingRectRight;
+	private float requestedFramingRectBottom;
 	/**
 	 * Preview frames are delivered here, which we pass on to the registered
 	 * handler. Make sure to clear the handler so it will only receive one
@@ -98,11 +100,14 @@ public final class CameraManager {
 		if (!initialized) {
 			initialized = true;
 			configManager.initFromCameraParameters(theCamera);
-			if (requestedFramingRectWidth > 0 && requestedFramingRectHeight > 0) {
-				setManualFramingRect(requestedFramingRectWidth,
-						requestedFramingRectHeight);
-				requestedFramingRectWidth = 0;
-				requestedFramingRectHeight = 0;
+			if (requestedFramingRectLeft > 0 && requestedFramingRectTop > 0
+					&& requestedFramingRectRight > 0 && requestedFramingRectBottom > 0) {
+				setManualFramingRect(requestedFramingRectLeft, requestedFramingRectTop
+						,requestedFramingRectRight,requestedFramingRectBottom);
+				requestedFramingRectLeft = 0;
+				requestedFramingRectTop = 0;
+				requestedFramingRectRight = 0;
+				requestedFramingRectBottom = 0;
 			}
 		}
 
@@ -221,19 +226,24 @@ public final class CameraManager {
 //					MIN_FRAME_WIDTH, MAX_FRAME_WIDTH);
 //			int height = findDesiredDimensionInRange(screenResolution.y,
 //					MIN_FRAME_HEIGHT, MAX_FRAME_HEIGHT);
-			
-//			int width = findDesiredDimensionInRange(screenResolution.x,
-//					MIN_FRAME_WIDTH, MAX_FRAME_WIDTH)*4/5;
-//			int height = findDesiredDimensionInRange(screenResolution.y,
-//					MIN_FRAME_HEIGHT, MAX_FRAME_HEIGHT)*4/5;
+			if (requestedFramingRectLeft > 0 && requestedFramingRectTop > 0
+					&& requestedFramingRectRight > 0 && requestedFramingRectBottom > 0) {
+				int left = (int) (requestedFramingRectLeft * screenResolution.x);
+				int top = (int) (requestedFramingRectTop * screenResolution.x);
+				int right = (int) ((1 - requestedFramingRectRight) * screenResolution.x);
+				int bottom = (int) ((1 - requestedFramingRectBottom) * screenResolution.x);
+				framingRect = new Rect(left,top,right - left,bottom - top);
+			}else {
+				int width = findDesiredDimensionInRange(screenResolution.x,
+						MIN_FRAME_WIDTH, MAX_FRAME_WIDTH) * 4 / 5;
+				int height = findDesiredDimensionInRange(screenResolution.y,
+						MIN_FRAME_HEIGHT, MAX_FRAME_HEIGHT) * 4 / 5;
 
-			int width = 800;
-			int height = 800;
-
-			int leftOffset = (screenResolution.x - width) / 2;
-			int topOffset = (screenResolution.y - height) / 2;
-			framingRect = new Rect(leftOffset, topOffset, leftOffset + width,
-					topOffset + height);
+				int leftOffset = (screenResolution.x - width) / 2;
+				int topOffset = (screenResolution.y - height) / 2;
+				framingRect = new Rect(leftOffset, topOffset, leftOffset + width,
+						topOffset + height);
+			}
 			Log.d(TAG, "Calculated framing rect: " + framingRect);
 		}
 		return framingRect;
@@ -297,30 +307,32 @@ public final class CameraManager {
 	/**
 	 * Allows third party apps to specify the scanning rectangle dimensions,
 	 * rather than determine them automatically based on screen resolution.
-	 * 
-	 * @param width
-	 *            The width in pixels to scan.
-	 * @param height
-	 *            The height in pixels to scan.
+	 * @param leftPercent 百分比 0-1
+	 * @param topPercent  百分比 0-1
+	 * @param rightPercent  百分比 0-1
+	 * @param bottomPercent  百分比 0-1
 	 */
-	public synchronized void setManualFramingRect(int width, int height) {
+	public synchronized void setManualFramingRect( float leftPercent, float topPercent, float rightPercent, float bottomPercent) {
 		if (initialized) {
 			Point screenResolution = configManager.getScreenResolution();
-			if (width > screenResolution.x) {
-				width = screenResolution.x;
+			if((1 - leftPercent) >= rightPercent){
+				return;
 			}
-			if (height > screenResolution.y) {
-				height = screenResolution.y;
+			if((1 - topPercent) > bottomPercent){
+				return;
 			}
-			int leftOffset = (screenResolution.x - width) / 2;
-			int topOffset = (screenResolution.y - height) / 2;
-			framingRect = new Rect(leftOffset, topOffset, leftOffset + width,
-					topOffset + height);
+			int left = (int) (leftPercent * screenResolution.x);
+			int top = (int) (topPercent * screenResolution.x);
+			int right = (int) ((1 - rightPercent) * screenResolution.x);
+			int bottom = (int) ((1 - bottomPercent) * screenResolution.x);
+			framingRect = new Rect(left,top,right - left,bottom - top);
 			Log.d(TAG, "Calculated manual framing rect: " + framingRect);
 			framingRectInPreview = null;
 		} else {
-			requestedFramingRectWidth = width;
-			requestedFramingRectHeight = height;
+			requestedFramingRectLeft = leftPercent;
+			requestedFramingRectTop = topPercent;
+			requestedFramingRectRight = rightPercent;
+			requestedFramingRectBottom = bottomPercent;
 		}
 	}
 
@@ -338,10 +350,11 @@ public final class CameraManager {
 	 */
 	public PlanarYUVLuminanceSource buildLuminanceSource(byte[] data,
                                                          int width, int height) {
-		Rect rect = getFramingRectInPreview();
+		Rect rect = getFramingRect();
 		if (rect == null) {
 			return null;
 		}
+		Log.d("testtest",rect.width() + "+++++" + rect.height());
 		// Go ahead and assume it's YUV rather than die.
 		return new PlanarYUVLuminanceSource(data, width, height, rect.left,
 				rect.top, rect.width(), rect.height(), false);

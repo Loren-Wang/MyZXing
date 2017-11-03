@@ -12,10 +12,18 @@
         android:layout_height="match_parent" />
 
     <ImageView
+        android:layout_width="780px"
+        android:layout_height="match_parent"
+        android:layout_alignParentRight="true"
+        android:background="#22ff00ff"/>
+
+    <ImageView
         android:id="@+id/imgView"
         android:layout_width="400px"
         android:layout_height="400px"
         android:layout_centerInParent="true"
         android:background="#22000000"/>
+
+
 
 </RelativeLayout>
