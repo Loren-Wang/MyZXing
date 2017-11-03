@@ -23,12 +23,9 @@ import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
-import com.myzxing.android.manager.PreferencesActivity;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.RejectedExecutionException;
-
 
 final class AutoFocusManager implements Camera.AutoFocusCallback {
 
@@ -62,11 +59,10 @@ final class AutoFocusManager implements Camera.AutoFocusCallback {
   @Override
   public synchronized void onAutoFocus(boolean success, Camera theCamera) {
     focusing = false;
-    camera.cancelAutoFocus();//使用这个方法后会直接自动对焦
     autoFocusAgainLater();
   }
 
-  private void autoFocusAgainLater() {
+  private synchronized void autoFocusAgainLater() {
     if (!stopped && outstandingTask == null) {
       AutoFocusTask newTask = new AutoFocusTask();
       try {
@@ -80,7 +76,7 @@ final class AutoFocusManager implements Camera.AutoFocusCallback {
 
   synchronized void start() {
     if (useAutoFocus) {
-      cancelOutstandingTask();
+      outstandingTask = null;
       if (!stopped && !focusing) {
         try {
           camera.autoFocus(this);
@@ -95,7 +91,7 @@ final class AutoFocusManager implements Camera.AutoFocusCallback {
     }
   }
 
-  private void cancelOutstandingTask() {
+  private synchronized void cancelOutstandingTask() {
     if (outstandingTask != null) {
       if (outstandingTask.getStatus() != AsyncTask.Status.FINISHED) {
         outstandingTask.cancel(true);

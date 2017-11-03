@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package com.myzxing.android.manager;
+package com.myzxing.android.decode;
 
 import android.content.Intent;
 import android.net.Uri;
+
 import com.google.zxing.BarcodeFormat;
 
 import java.util.Arrays;
@@ -28,7 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-public class DecodeFormatManager {
+public final class DecodeFormatManager {
 
   private static final Pattern COMMA_PATTERN = Pattern.compile(",");
 
@@ -56,7 +57,7 @@ public class DecodeFormatManager {
   }
   private static final Map<String,Set<BarcodeFormat>> FORMATS_FOR_MODE;
   static {
-    FORMATS_FOR_MODE = new HashMap<>();
+    FORMATS_FOR_MODE = new HashMap<String,Set<BarcodeFormat>>();
     FORMATS_FOR_MODE.put(Intents.Scan.ONE_D_MODE, ONE_D_FORMATS);
     FORMATS_FOR_MODE.put(Intents.Scan.PRODUCT_MODE, PRODUCT_FORMATS);
     FORMATS_FOR_MODE.put(Intents.Scan.QR_CODE_MODE, QR_CODE_FORMATS);
@@ -67,7 +68,7 @@ public class DecodeFormatManager {
 
   private DecodeFormatManager() {}
 
-  static Set<BarcodeFormat> parseDecodeFormats(Intent intent) {
+  public static Set<BarcodeFormat> parseDecodeFormats(Intent intent) {
     Iterable<String> scanFormats = null;
     CharSequence scanFormatsString = intent.getStringExtra(Intents.Scan.FORMATS);
     if (scanFormatsString != null) {
@@ -76,7 +77,7 @@ public class DecodeFormatManager {
     return parseDecodeFormats(scanFormats, intent.getStringExtra(Intents.Scan.MODE));
   }
 
-  static Set<BarcodeFormat> parseDecodeFormats(Uri inputUri) {
+  public static Set<BarcodeFormat> parseDecodeFormats(Uri inputUri) {
     List<String> formats = inputUri.getQueryParameters(Intents.Scan.FORMATS);
     if (formats != null && formats.size() == 1 && formats.get(0) != null){
       formats = Arrays.asList(COMMA_PATTERN.split(formats.get(0)));
