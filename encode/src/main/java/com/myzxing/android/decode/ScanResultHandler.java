@@ -28,4 +28,8 @@ public class ScanResultHandler extends Handler{
         super.handleMessage(msg);
         qrCodeEncode.handleScanResultMessage(msg);//消息回传
     }
+
+    public void quitSynchronously() {
+        qrCodeEncode.quitScanResultSynchronously();//回调结果处理初始化
+    }
 }

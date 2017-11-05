@@ -1,7 +1,10 @@
 package com.myzxingtest.android;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.SurfaceView;
 import android.view.View;
@@ -43,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         imgView.setImageBitmap(barcode);
-                        Toast.makeText(MainActivity.this,rawResult.getText(),Toast.LENGTH_LONG).show();
+                        Toast.makeText(MainActivity.this, rawResult.getText(), Toast.LENGTH_LONG).show();
                     }
                 });
             }
@@ -56,6 +59,31 @@ public class MainActivity extends AppCompatActivity {
                         imgView.setImageBitmap(bitmap);
                     }
                 });
+            }
+
+            @Override
+            protected float getLeftPercent() {
+                return 0.4f;
+            }
+
+            @Override
+            protected float getTopPercent() {
+                return 0.4f;
+            }
+
+            @Override
+            protected float getRighttPercent() {
+                return 0.4f;
+            }
+
+            @Override
+            protected float getBottomPercent() {
+                return 0.4f;
+            }
+
+            @Override
+            protected boolean isRunningScan() {
+                return true;
             }
         };
         qrCodeEncode.onCreate(this);
@@ -72,12 +100,22 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-//        qrCodeEncode.onEncodePause(getApplication());
+        qrCodeEncode.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
         qrCodeEncode.onResume();
     }
 

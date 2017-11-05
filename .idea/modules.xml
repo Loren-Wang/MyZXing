@@ -4,7 +4,9 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/MyZXing.iml" filepath="$PROJECT_DIR$/MyZXing.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://D:\DevelopProject\Android\Official\MyZXing\app\app.iml" filepath="D:\DevelopProject\Android\Official\MyZXing\app\app.iml" />
       <module fileurl="file://$PROJECT_DIR$/encode/encode.iml" filepath="$PROJECT_DIR$/encode/encode.iml" />
+      <module fileurl="file://D:\DevelopProject\Android\Official\MyZXing\encode\encode.iml" filepath="D:\DevelopProject\Android\Official\MyZXing\encode\encode.iml" />
     </modules>
   </component>
 </project>

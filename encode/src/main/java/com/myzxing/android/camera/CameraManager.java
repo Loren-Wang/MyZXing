@@ -226,13 +226,15 @@ public final class CameraManager {
 //					MIN_FRAME_WIDTH, MAX_FRAME_WIDTH);
 //			int height = findDesiredDimensionInRange(screenResolution.y,
 //					MIN_FRAME_HEIGHT, MAX_FRAME_HEIGHT);
-			if (requestedFramingRectLeft > 0 && requestedFramingRectTop > 0
+			if(framingRect != null){
+				return framingRect;
+			}else if (requestedFramingRectLeft > 0 && requestedFramingRectTop > 0
 					&& requestedFramingRectRight > 0 && requestedFramingRectBottom > 0) {
 				int left = (int) (requestedFramingRectLeft * screenResolution.x);
-				int top = (int) (requestedFramingRectTop * screenResolution.x);
+				int top = (int) (requestedFramingRectTop * screenResolution.y);
 				int right = (int) ((1 - requestedFramingRectRight) * screenResolution.x);
-				int bottom = (int) ((1 - requestedFramingRectBottom) * screenResolution.x);
-				framingRect = new Rect(left,top,right - left,bottom - top);
+				int bottom = (int) ((1 - requestedFramingRectBottom) * screenResolution.y);
+				framingRect = new Rect(left,top,right,bottom);
 			}else {
 				int width = findDesiredDimensionInRange(screenResolution.x,
 						MIN_FRAME_WIDTH, MAX_FRAME_WIDTH) * 4 / 5;
@@ -315,17 +317,17 @@ public final class CameraManager {
 	public synchronized void setManualFramingRect( float leftPercent, float topPercent, float rightPercent, float bottomPercent) {
 		if (initialized) {
 			Point screenResolution = configManager.getScreenResolution();
-			if((1 - leftPercent) >= rightPercent){
+			if((1 - leftPercent) <= rightPercent){
 				return;
 			}
-			if((1 - topPercent) > bottomPercent){
+			if((1 - topPercent) <= bottomPercent){
 				return;
 			}
 			int left = (int) (leftPercent * screenResolution.x);
-			int top = (int) (topPercent * screenResolution.x);
+			int top = (int) (topPercent * screenResolution.y);
 			int right = (int) ((1 - rightPercent) * screenResolution.x);
-			int bottom = (int) ((1 - bottomPercent) * screenResolution.x);
-			framingRect = new Rect(left,top,right - left,bottom - top);
+			int bottom = (int) ((1 - bottomPercent) * screenResolution.y);
+			framingRect = new Rect(left,top,right,bottom);
 			Log.d(TAG, "Calculated manual framing rect: " + framingRect);
 			framingRectInPreview = null;
 		} else {
@@ -354,7 +356,7 @@ public final class CameraManager {
 		if (rect == null) {
 			return null;
 		}
-		Log.d("testtest",rect.width() + "+++++" + rect.height());
+		Log.d("testtest",rect.left + "+++++" + rect.right);
 		// Go ahead and assume it's YUV rather than die.
 		return new PlanarYUVLuminanceSource(data, width, height, rect.left,
 				rect.top, rect.width(), rect.height(), false);
