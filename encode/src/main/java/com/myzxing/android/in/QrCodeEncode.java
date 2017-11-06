@@ -367,6 +367,7 @@ public abstract class QrCodeEncode implements SurfaceHolder.Callback {
         hints.put(DecodeHintType.POSSIBLE_FORMATS, decodeFormats);
 
         Log.i("DecodeThread", "Hints: " + hints);
+
     }
     public void decodeThreadRun(){
         Looper.prepare();
@@ -417,6 +418,14 @@ public abstract class QrCodeEncode implements SurfaceHolder.Callback {
             break;
         }
     }
+
+    //解码变量
+    private Result rawResult;
+    private byte[] rotatedData;
+    private PlanarYUVLuminanceSource source;//生成指定区域解码的灰度图
+    private Bundle bundleCropImage;//正在被处理的指定区域的图片存储
+    private Message message;//回传消息
+    private BinaryBitmap bitmap;//生成解析图片
     /**
      * Decode the data within the viewfinder rectangle, and time how long it
      * took. For efficiency, reuse the same reader objects from one decode to
@@ -430,11 +439,10 @@ public abstract class QrCodeEncode implements SurfaceHolder.Callback {
      *            The height of the preview frame.
      */
     private void decode(byte[] data, int width, int height) {
-        long start = System.currentTimeMillis();
-        Result rawResult = null;
+        rawResult = null;
 
         /***************竖屏更改3**********************/
-        byte[] rotatedData = new byte[data.length];
+        rotatedData = new byte[data.length];
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++)
                 rotatedData[x * height + height - y - 1] = data[x + y * width];
@@ -445,39 +453,47 @@ public abstract class QrCodeEncode implements SurfaceHolder.Callback {
         data = rotatedData;
         /*************************************/
 
-        PlanarYUVLuminanceSource source = cameraManager
+        source = cameraManager
                 .buildLuminanceSource(data, width, height);
-        if (source != null) {
-            Message message = Message.obtain(scanResultHandler, SCAN_CROP_IMAGE, rawResult);
-            Bundle bundle = new Bundle();
-            bundleThumbnail(source, bundle);
-            message.setData(bundle);
+        if(source != null){
+            bundleCropImage = new Bundle();
+            bundleThumbnail(source, bundleCropImage);
+            //回传正在被处理的图片
+            message = Message.obtain(scanResultHandler, SCAN_CROP_IMAGE, rawResult);
+            message.setData(bundleCropImage);
             message.sendToTarget();
-//
-//            Log.d("testtest",source.getWidth() + "+++++" + source.getHeight());
 
-            BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+            //准备解析
+            bitmap = new BinaryBitmap(new HybridBinarizer(source));
             try {
+                //开始解析
                 rawResult = multiFormatReader.decodeWithState(bitmap);
             } catch (ReaderException re) {
                 // continue
             } finally {
+                //重置解析
                 multiFormatReader.reset();
             }
         }
 
+        //解析结果回传
         if (rawResult != null) {
-            Message message = Message.obtain(scanResultHandler, SCAN_SUCCESS, rawResult);
-            Bundle bundle = new Bundle();
-            bundleThumbnail(source, bundle);
-            message.setData(bundle);
+            message = Message.obtain(scanResultHandler, SCAN_SUCCESS, rawResult);
+            message.setData(bundleCropImage);
             message.sendToTarget();
             Log.d("test","解析成功");
         } else {
-            Message message = Message.obtain(scanResultHandler, SCAN_FAIL, rawResult);
+            message = Message.obtain(scanResultHandler, SCAN_FAIL, rawResult);
             message.sendToTarget();
             Log.d("test","解析失败");
         }
+        rawResult = null;
+        rotatedData = null;
+        source = null;
+        bundleCropImage = null;
+        message = null;
+        bitmap = null;
+
     }
     /**
      * 解码的灰度图
@@ -488,13 +504,31 @@ public abstract class QrCodeEncode implements SurfaceHolder.Callback {
         int[] pixels = source.renderThumbnail();
         int width = source.getThumbnailWidth();
         int height = source.getThumbnailHeight();
-        Bitmap bitmap = Bitmap.createBitmap(pixels, 0, width, width, height,
-                Bitmap.Config.ARGB_8888);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, out);
-        bundle.putByteArray(BARCODE_BITMAP, out.toByteArray());
-        bundle.putFloat(BARCODE_SCALED_FACTOR, (float) width
-                / source.getWidth());
+        Bitmap bitmap = null;
+        ByteArrayOutputStream out = null;
+        try {
+            bitmap = Bitmap.createBitmap(pixels, 0, width, width, height,
+                    Bitmap.Config.ARGB_8888);
+            out = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 50, out);
+            bundle.putByteArray(BARCODE_BITMAP, out.toByteArray());
+            bundle.putFloat(BARCODE_SCALED_FACTOR, (float) width
+                    / source.getWidth());
+        }catch (Exception e){
+        }finally {
+            bitmap = null;
+            if(out != null){
+                try {
+                    out.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                out = null;
+            }
+            pixels = null;
+            width = 0;
+            height = 0;
+        }
     }
 
 }
